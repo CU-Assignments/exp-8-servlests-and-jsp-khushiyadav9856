@@ -1,0 +1,153 @@
+1. Database Setup
+CREATE DATABASE StudentPortal;
+USE StudentPortal;
+
+CREATE TABLE attendance (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    student_name VARCHAR(100),
+    course VARCHAR(50),
+    date DATE,
+    status ENUM('Present', 'Absent')
+);
+2. JDBC Connection 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DBConnection {
+    private static final String URL = "jdbc:mysql://localhost:3306/StudentPortal";
+    private static final String USER = "root"; // Change according to your DB credentials
+    private static final String PASSWORD = ""; // Your DB password
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+}
+3. Servlet to Store Attendance 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@WebServlet("/AttendanceServlet")
+public class AttendanceServlet extends HttpServlet {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setContentType("text/html");
+        PrintWriter out = response.getWriter();
+
+        String studentName = request.getParameter("studentName");
+        String course = request.getParameter("course");
+        String date = request.getParameter("date");
+        String status = request.getParameter("status");
+
+        try {
+            Connection conn = DBConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO attendance (student_name, course, date, status) VALUES (?, ?, ?, ?)");
+            ps.setString(1, studentName);
+            ps.setString(2, course);
+            ps.setString(3, date);
+            ps.setString(4, status);
+
+            int rowsInserted = ps.executeUpdate();
+
+            if (rowsInserted > 0) {
+                out.println("<h3>Attendance recorded successfully!</h3>");
+            } else {
+                out.println("<h3>Failed to record attendance.</h3>");
+            }
+
+            conn.close();
+        } catch (Exception e) {
+            out.println("<h3>Error: " + e.getMessage() + "</h3>");
+        }
+    }
+}
+4. JSP Form to Enter Attendance
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Attendance</title>
+</head>
+<body>
+    <h2>Enter Attendance Details</h2>
+    <form action="AttendanceServlet" method="post">
+        Student Name: <input type="text" name="studentName" required><br><br>
+        Course: <input type="text" name="course" required><br><br>
+        Date: <input type="date" name="date" required><br><br>
+        Status:
+        <select name="status">
+            <option value="Present">Present</option>
+            <option value="Absent">Absent</option>
+        </select><br><br>
+        <input type="submit" value="Submit Attendance">
+    </form>
+    <br>
+    <a href="viewAttendance.jsp">View Attendance Records</a>
+</body>
+</html>
+
+5. JSP Page to View Attendance
+<%@ page import="java.sql.*" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Attendance</title>
+</head>
+<body>
+    <h2>Attendance Records</h2>
+
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Student Name</th>
+            <th>Course</th>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>
+
+        <%
+            try {
+                Connection conn = DBConnection.getConnection();
+                PreparedStatement ps = conn.prepareStatement("SELECT * FROM attendance");
+                ResultSet rs = ps.executeQuery();
+
+                while (rs.next()) {
+        %>
+                    <tr>
+                        <td><%= rs.getInt("id") %></td>
+                        <td><%= rs.getString("student_name") %></td>
+                        <td><%= rs.getString("course") %></td>
+                        <td><%= rs.getDate("date") %></td>
+                        <td><%= rs.getString("status") %></td>
+                    </tr>
+        <%
+                }
+                conn.close();
+            } catch (Exception e) {
+                out.println("<h3>Error: " + e.getMessage() + "</h3>");
+            }
+        %>
+
+    </table>
+</body>
+</html>
+6. Deployment Configuration 
+<web-app>
+    <servlet>
+        <servlet-name>AttendanceServlet</servlet-name>
+        <servlet-class>AttendanceServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AttendanceServlet</servlet-name>
+        <url-pattern>/AttendanceServlet</url-pattern>
+    </servlet-mapping>
+</web-app>
+
+ 
