@@ -1,0 +1,147 @@
+1.  Database Setup 
+CREATE DATABASE EmployeeDB;
+USE EmployeeDB;
+
+CREATE TABLE employees (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100),
+    department VARCHAR(50),
+    salary DOUBLE
+);
+
+INSERT INTO employees (name, department, salary) VALUES 
+('Alice', 'HR', 50000),
+('Bob', 'IT', 60000),
+('Charlie', 'Finance', 55000);
+
+2. JDBC Configuration 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DBConnection {
+    private static final String URL = "jdbc:mysql://localhost:3306/EmployeeDB";
+    private static final String USER = "root"; 
+    private static final String PASSWORD = ""; 
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+}
+
+3.  Servlet to Display Employee List 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@WebServlet("/EmployeeServlet")
+public class EmployeeServlet extends HttpServlet {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setContentType("text/html");
+        PrintWriter out = response.getWriter();
+
+        try {
+            Connection conn = DBConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees");
+            ResultSet rs = ps.executeQuery();
+
+            out.println("<h2>Employee List</h2>");
+            out.println("<table border='1'><tr><th>ID</th><th>Name</th><th>Department</th><th>Salary</th></tr>");
+
+            while (rs.next()) {
+                out.println("<tr><td>" + rs.getInt("id") + "</td><td>" + rs.getString("name") + "</td><td>" + rs.getString("department") + "</td><td>" + rs.getDouble("salary") + "</td></tr>");
+            }
+            out.println("</table>");
+            
+            conn.close();
+        } catch (Exception e) {
+            out.println("<h3>Error: " + e.getMessage() + "</h3>");
+        }
+    }
+}
+4. 4. Search Employee by ID
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@WebServlet("/SearchEmployeeServlet")
+public class SearchEmployeeServlet extends HttpServlet {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setContentType("text/html");
+        PrintWriter out = response.getWriter();
+
+        int empId = Integer.parseInt(request.getParameter("empId"));
+
+        try {
+            Connection conn = DBConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement("SELECT * FROM employees WHERE id = ?");
+            ps.setInt(1, empId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                out.println("<h2>Employee Details</h2>");
+                out.println("<p><b>ID:</b> " + rs.getInt("id") + "</p>");
+                out.println("<p><b>Name:</b> " + rs.getString("name") + "</p>");
+                out.println("<p><b>Department:</b> " + rs.getString("department") + "</p>");
+                out.println("<p><b>Salary:</b> " + rs.getDouble("salary") + "</p>");
+            } else {
+                out.println("<h3>No Employee Found with ID: " + empId + "</h3>");
+            }
+            
+            conn.close();
+        } catch (Exception e) {
+            out.println("<h3>Error: " + e.getMessage() + "</h3>");
+        }
+    }
+}
+
+5.  HTML Form
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Employee</title>
+</head>
+<body>
+    <h2>Search Employee by ID</h2>
+    <form action="SearchEmployeeServlet" method="post">
+        Enter Employee ID: <input type="number" name="empId" required><br><br>
+        <input type="submit" value="Search">
+    </form>
+</body>
+</html>
+6.  6. Deployment Configuration
+<web-app>
+    <servlet>
+        <servlet-name>EmployeeServlet</servlet-name>
+        <servlet-class>EmployeeServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EmployeeServlet</servlet-name>
+        <url-pattern>/EmployeeServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>SearchEmployeeServlet</servlet-name>
+        <servlet-class>SearchEmployeeServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>SearchEmployeeServlet</servlet-name>
+        <url-pattern>/SearchEmployeeServlet</url-pattern>
+    </servlet-mapping>
+</web-app>
+
+
